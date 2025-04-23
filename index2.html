@@ -1,0 +1,129 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Marathon Pace Planner</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f3f4f6;
+      margin: 0;
+      padding: 2rem;
+      color: #111827;
+    }
+    .container {
+      max-width: 700px;
+      margin: auto;
+      background: white;
+      padding: 2rem;
+      border-radius: 1rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    input, select {
+      width: 100%;
+      padding: 0.5rem;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      border-radius: 0.5rem;
+      border: 1px solid #ccc;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    th, td {
+      padding: 0.6rem;
+      text-align: center;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    th {
+      background: #f9fafb;
+    }
+    .highlight {
+      font-weight: bold;
+      color: #2563eb;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Marathon Pace Planner</h1>
+    <label>Enter your goal time (hh:mm):</label>
+    <input type="text" id="goalTime" placeholder="e.g. 3:30" />
+    <label>Choose distance unit:</label>
+    <select id="unitSelect">
+      <option value="miles">Miles</option>
+      <option value="km">Kilometers</option>
+    </select>
+    <div id="paceTable"></div>
+  </div>  <script>
+    function timeToMinutes(timeStr) {
+      const [h, m] = timeStr.split(":").map(Number);
+      return h * 60 + m;
+    }
+
+    function formatMinutesPerUnit(paceMin) {
+      const min = Math.floor(paceMin);
+      const sec = Math.round((paceMin - min) * 60);
+      return `${min}:${sec.toString().padStart(2, "0")}`;
+    }
+
+    const stagesMiles = [
+      { stage: "1", adj: 1 },
+      { stage: "2", adj: 0.5 },
+      { stage: "3", adj: 0.25 },
+      { stage: "4–5", adj: 0 },
+      { stage: "6–13", adj: -0.08 },
+      { stage: "14–20", adj: -0.08 },
+      { stage: "21–25", adj: 0 },
+      { stage: "25–26.2", adj: null },
+    ];
+
+    const stagesKm = [
+      { stage: "1.6", adj: 1 },
+      { stage: "3.2", adj: 0.5 },
+      { stage: "4.8", adj: 0.25 },
+      { stage: "6.4–8", adj: 0 },
+      { stage: "9.6–20.8", adj: -0.08 },
+      { stage: "22.5–32", adj: -0.08 },
+      { stage: "33.8–40.2", adj: 0 },
+      { stage: "40.2–42.2", adj: null },
+    ];
+
+    function updateTable() {
+      const input = document.getElementById("goalTime").value;
+      const unit = document.getElementById("unitSelect").value;
+      if (!/^\d{1,2}:\d{2}$/.test(input)) return;
+
+      const totalMinutes = timeToMinutes(input);
+      const pacePerMile = totalMinutes / 26.2;
+      const pacePerKm = totalMinutes / 42.2;
+      const stages = unit === "miles" ? stagesMiles : stagesKm;
+      const pace = unit === "miles" ? pacePerMile : pacePerKm;
+
+      let html = `
+        <table>
+          <thead>
+            <tr><th>Stage (${unit})</th><th>Pace (min/${unit})</th></tr>
+          </thead>
+          <tbody>
+      `;
+
+      for (const s of stages) {
+        let displayPace = s.adj === null ? "Give it all!" : formatMinutesPerUnit(pace + s.adj);
+        html += `<tr><td>${s.stage}</td><td class="${s.adj === 0 ? 'highlight' : ''}">${displayPace}</td></tr>`;
+      }
+
+      html += `</tbody></table>`;
+      document.getElementById("paceTable").innerHTML = html;
+    }
+
+    document.getElementById("goalTime").addEventListener("input", updateTable);
+    document.getElementById("unitSelect").addEventListener("change", updateTable);
+  </script></body>
+</html>
