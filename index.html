@@ -1,20 +1,33 @@
-<!DOCTYPE html><html lang="en">
+<!-- 
+Version: 1.1
+Date: 2025-04-26, 21:30 UTC
+Changes:
+- Added description column to the pace table
+- Final stage (8) now inherits pace from previous stage
+- Chart now includes all stages
+- Applied a soft yellow color palette for the graph
+-->
+
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Marathon Pace Planner</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.4.0"></script>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      background: #f3f4f6;
+      background: #fefce8;
       margin: 0;
       padding: 2rem;
-      color: #111827;
+      color: #78350f;
     }
     .container {
       max-width: 700px;
       margin: auto;
-      background: white;
+      background: #fffbea;
       padding: 2rem;
       border-radius: 1rem;
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
@@ -23,84 +36,222 @@
       text-align: center;
       margin-bottom: 1rem;
     }
-    input {
+    input, select {
       width: 100%;
       padding: 0.5rem;
       font-size: 1rem;
       margin-bottom: 1rem;
       border-radius: 0.5rem;
-      border: 1px solid #ccc;
+      border: 1px solid #fde68a;
+      background: #fef9c3;
     }
     table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 1rem;
+      background: #fff;
     }
     th, td {
       padding: 0.6rem;
       text-align: center;
-      border-bottom: 1px solid #e5e7eb;
+      border-bottom: 1px solid #fcd34d;
     }
     th {
-      background: #f9fafb;
+      background: #fef3c7;
+      color: #78350f;
     }
     .highlight {
       font-weight: bold;
-      color: #2563eb;
+      color: #d97706;
+    }
+    canvas {
+      margin-top: 2rem;
+      background: #fffbea;
+      border-radius: 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
   </style>
 </head>
+
 <body>
   <div class="container">
     <h1>Marathon Pace Planner</h1>
     <label>Enter your goal time (hh:mm):</label>
     <input type="text" id="goalTime" placeholder="e.g. 3:30" />
+    <label>Choose distance unit:</label>
+    <select id="unitSelect">
+      <option value="miles">Miles</option>
+      <option value="km">Kilometers</option>
+    </select>
     <div id="paceTable"></div>
-  </div>  <script>
+    <canvas id="paceChart"></canvas>
+  </div>
+
+  <script>
+    let chart;
+
     function timeToMinutes(timeStr) {
       const [h, m] = timeStr.split(":").map(Number);
       return h * 60 + m;
     }
 
-    function formatMinutesPerMile(paceMin) {
+    function formatMinutesPerUnit(paceMin) {
       const min = Math.floor(paceMin);
       const sec = Math.round((paceMin - min) * 60);
       return `${min}:${sec.toString().padStart(2, "0")}`;
     }
 
-    const stages = [
-      { stage: "Mile 1", adj: 1 },
-      { stage: "Mile 2", adj: 0.5 },
-      { stage: "Mile 3", adj: 0.25 },
-      { stage: "Miles 4–5", adj: 0 },
-      { stage: "Miles 6–13", adj: -0.08 },
-      { stage: "Miles 14–20", adj: -0.08 },
-      { stage: "Miles 21–25", adj: 0 },
-      { stage: "Miles 25–26.2", adj: null },
+    const stagesMiles = [
+      { stage: 1, adj: 1 },
+      { stage: 4, adj: 0.5 },
+      { stage: 7, adj: 0.25 },
+      { stage: 10, adj: 0 },
+      { stage: 15, adj: -0.08 },
+      { stage: 20, adj: -0.08 },
+      { stage: 24, adj: 0 },
+      { stage: 26.2, adj: null }
     ];
 
-    document.getElementById("goalTime").addEventListener("input", () => {
+    const stagesKm = [
+      { stage: 1, adj: 1 },
+      { stage: 5, adj: 0.5 },
+      { stage: 10, adj: 0.25 },
+      { stage: 15, adj: 0 },
+      { stage: 25, adj: -0.08 },
+      { stage: 32, adj: -0.08 },
+      { stage: 38, adj: 0 },
+      { stage: 42.2, adj: null }
+    ];
+
+    const stageNotes = [
+      "60 seconds slower than goal pace",
+      "30 seconds slower than goal pace",
+      "15 seconds slower than goal pace",
+      "Settle into goal pace",
+      "Gently pick it up to 5–10 seconds faster than goal pace",
+      "5–10 seconds faster than goal pace",
+      "Try to hold on to goal pace",
+      "Dig deep and finish strong!"
+    ];
+
+    function updateTable() {
       const input = document.getElementById("goalTime").value;
+      const unit = document.getElementById("unitSelect").value;
       if (!/^\d{1,2}:\d{2}$/.test(input)) return;
 
       const totalMinutes = timeToMinutes(input);
       const pacePerMile = totalMinutes / 26.2;
+      const pacePerKm = totalMinutes / 42.2;
+      const stages = unit === "miles" ? stagesMiles : stagesKm;
+      const pace = unit === "miles" ? pacePerMile : pacePerKm;
 
       let html = `
         <table>
           <thead>
-            <tr><th>Stage</th><th>Pace (min/mile)</th></tr>
+            <tr><th>Stage (${unit})</th><th>Pace (min/${unit})</th><th>Description</th></tr>
           </thead>
           <tbody>
       `;
 
-      for (const s of stages) {
-        let pace = s.adj === null ? "Give it all!" : formatMinutesPerMile(pacePerMile + s.adj);
-        html += `<tr><td>${s.stage}</td><td class="${s.adj === 0 ? 'highlight' : ''}">${pace}</td></tr>`;
+      const labels = [];
+      const data = [];
+
+      for (let i = 0; i < stages.length; i++) {
+        const s = stages[i];
+        let displayPace;
+        let paceValue;
+
+        if (s.adj === null) {
+          paceValue = pace + stages[i - 1].adj;
+          displayPace = formatMinutesPerUnit(paceValue);
+        } else {
+          paceValue = pace + s.adj;
+          displayPace = formatMinutesPerUnit(paceValue);
+        }
+
+        labels.push(s.stage);
+        data.push(paceValue);
+
+        const note = stageNotes[i] || "";
+        html += `<tr>
+          <td>${s.stage}</td>
+          <td class="${s.adj === 0 ? 'highlight' : ''}">${displayPace}</td>
+          <td>${note}</td>
+        </tr>`;
       }
 
       html += `</tbody></table>`;
       document.getElementById("paceTable").innerHTML = html;
-    });
-  </script></body>
+
+      if (chart) chart.destroy();
+      const ctx = document.getElementById('paceChart').getContext('2d');
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: `Pace (min/${unit})`,
+            data: data,
+            fill: true,
+            backgroundColor: 'rgba(253, 224, 71, 0.2)', // light yellow background
+            borderColor: '#facc15', // yellow line
+            pointBackgroundColor: '#facc15',
+            pointBorderColor: '#78350f',
+            pointRadius: 6,
+            borderWidth: 3,
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            annotation: {
+              annotations: {
+                goalLine: {
+                  type: 'line',
+                  yMin: pace,
+                  yMax: pace,
+                  borderColor: '#f59e0b',
+                  borderWidth: 2,
+                  label: {
+                    content: 'Goal Pace',
+                    enabled: true,
+                    position: 'start',
+                    backgroundColor: '#fde68a',
+                    color: '#78350f'
+                  }
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              reverse: true,
+              title: {
+                display: true,
+                text: `Pace (min/${unit})`
+              }
+            },
+            x: {
+              type: 'linear',
+              title: {
+                display: true,
+                text: `Distance (${unit})`
+              },
+              ticks: {
+                callback: function(value) {
+                  return labels.includes(value) ? value : '';
+                },
+                stepSize: 1
+              }
+            }
+          }
+        }
+      });
+    }
+
+    document.getElementById("goalTime").addEventListener("input", updateTable);
+    document.getElementById("unitSelect").addEventListener("change", updateTable);
+  </script>
+</body>
 </html>
