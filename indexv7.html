@@ -1,11 +1,11 @@
 <!-- 
-  Version: v3.1
+  Version: v3.0
   Fecha: 2025-04-26
   Hora: [Hora local]
   Descripción:
-    - Línea de referencia de tiempo objetivo.
-    - Escala proporcional hasta el final de maratón.
-    - Fondo amarillo claro restaurado.
+    - Se actualizó el código para agregar un segundo gráfico.
+    - Gráfico 1: Pace vs Distance.
+    - Gráfico 2: Tiempo acumulado vs Distance.
 -->
 
 <!DOCTYPE html>
@@ -13,13 +13,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Marathon Pace Planner v3.1</title>
+  <title>Marathon Pace Planner v3.0</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.4.0"></script>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      background: #fffbea; /* fondo amarillo claro */
+      background: #f3f4f6;
       margin: 0;
       padding: 2rem;
       color: #111827;
@@ -142,7 +142,6 @@
       const pacePerMile = totalMinutes / 26.2;
       const pacePerKm = totalMinutes / 42.195;
       const stages = unit === "miles" ? stagesMiles : stagesKm;
-      const fullDistance = unit === "miles" ? 26.2 : 42.2;
       const pace = unit === "miles" ? pacePerMile : pacePerKm;
 
       let html = `
@@ -175,6 +174,7 @@
           labels.push(Math.round(s.stage * 10) / 10);
           data.push(currentPace);
 
+          // Calcular tiempo acumulado
           cumulativeTime += currentPace * (i === 0 ? stages[i].stage : (stages[i].stage - stages[i - 1].stage));
           accumulatedDistances.push(Math.round(s.stage * 10) / 10);
           accumulatedTimes.push(cumulativeTime);
@@ -220,8 +220,6 @@
               }
             },
             x: {
-              min: 0,
-              max: fullDistance,
               title: {
                 display: true,
                 text: `Distance (${unit})`
@@ -251,27 +249,6 @@
         },
         options: {
           responsive: true,
-          plugins: {
-            annotation: {
-              annotations: {
-                goalLine: {
-                  type: 'line',
-                  yMin: totalMinutes,
-                  yMax: totalMinutes,
-                  borderColor: '#f59e0b',
-                  borderWidth: 2,
-                  label: {
-                    content: `Goal: ${input}`,
-                    enabled: true,
-                    position: 'start',
-                    backgroundColor: 'rgba(245, 158, 11, 0.8)',
-                    color: 'white',
-                    font: { weight: 'bold' }
-                  }
-                }
-              }
-            }
-          },
           scales: {
             y: {
               title: {
@@ -280,8 +257,6 @@
               }
             },
             x: {
-              min: 0,
-              max: fullDistance,
               title: {
                 display: true,
                 text: `Distance (${unit})`
