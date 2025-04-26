@@ -1,4 +1,75 @@
-<script>
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Marathon Pace Planner</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.4.0"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f3f4f6;
+      margin: 0;
+      padding: 2rem;
+      color: #111827;
+    }
+    .container {
+      max-width: 700px;
+      margin: auto;
+      background: white;
+      padding: 2rem;
+      border-radius: 1rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    input, select {
+      width: 100%;
+      padding: 0.5rem;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      border-radius: 0.5rem;
+      border: 1px solid #ccc;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    th, td {
+      padding: 0.6rem;
+      text-align: center;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    th {
+      background: #f9fafb;
+    }
+    .highlight {
+      font-weight: bold;
+      color: #2563eb;
+    }
+    canvas {
+      margin-top: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Marathon Pace Planner</h1>
+    <label>Enter your goal time (hh:mm):</label>
+    <input type="text" id="goalTime" placeholder="e.g. 3:30" />
+    <label>Choose distance unit:</label>
+    <select id="unitSelect">
+      <option value="miles">Miles</option>
+      <option value="km">Kilometers</option>
+    </select>
+    <div id="paceTable"></div>
+    <canvas id="paceChart"></canvas>
+  </div>  
+  
+  <script>
     let chart;
   
     function timeToMinutes(timeStr) {
@@ -157,4 +228,6 @@
     document.getElementById("goalTime").addEventListener("input", updateTable);
     document.getElementById("unitSelect").addEventListener("change", updateTable);
   </script>
+  </body>
+  </html>
   
