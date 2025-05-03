@@ -1,0 +1,353 @@
+<!-- 
+Version: 3.10-mini
+Date: 2025-04-27 18:15 IST
+Changes:
+- Polished buttons
+- Fixed chart load issue
+- Corrected km stages based on mile positions
+- Minor style refinements
+- Aligned label and input on same line
+- Added target pace line to chart
+- Added axis labels for each stage
+- Improved h1 styling
+- Fixed infinite height growth issue in chart
+- Fixed x-axis scale to be proportional to marathon distance
+- Updates by Claude
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Marathon Pace Planner</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #fff9db;
+      margin: 0;
+      padding: 1.5rem;
+      color: #111827;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    .container {
+      flex: 1;
+      max-width: 100%;
+      margin: auto;
+      background: white;
+      padding: 1.5rem;
+      border-radius: 1rem;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      font-size: 2.2rem;
+      color: #004ab1;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+      border-bottom: 2px solid #fde68a;
+      padding-bottom: 0.5rem;
+    }
+    h2 {
+      text-align: center;
+      /*margin-top: 2rem;*/
+      font-size: 1.3rem;
+      color: #4b5563;
+      text-decoration: underline;
+    }
+    .label2 {
+      font-size: 1.3rem;
+      color: #004ab1;
+      display: inline-block;
+      margin-right: 1rem;
+      vertical-align: middle;
+    }
+
+    label {
+      text-align: center;
+      margin-bottom: 0.5rem;
+      font-size: 1.1rem;
+    }
+    
+    .input-container {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    
+    input {
+      width: 6rem;
+      padding: 0.5rem;
+      font-size: 3rem;
+      border-radius: 0.5rem;
+      border: 1px solid #ccc;
+      text-align: center;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      margin: 0.5rem;
+      font-size: 1rem;
+      text-align: center; /* Centra los botones horizontalmente */
+      border-radius: 0.5rem;
+      border: none;
+      background-color: #fde68a;
+      color: #92400e;
+      cursor: pointer;
+      display: inline-block;
+    margin: 10px auto; /* Centra cada botón individualmente */
+  
+    }
+    button.active {
+      background-color: #facc15;
+      color: #78350f;
+    }
+
+    .button-container {
+      text-align: center;
+    width: 100%;
+    display: inline-block;
+  }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+    }
+    th, td {
+      padding: 0.5rem;
+      text-align: center;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .td2
+    {
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    th {
+      background: #fef9c3;
+    }
+    .th2 {
+      text-align: left;
+      background: #fef9c3;
+    }
+    .highlight {
+      font-weight: bold;
+      color: #d97706;
+    }
+    p.description {
+      margin-top: 1rem;
+      font-size: 1rem;
+      text-align: center;
+      color: #6b7280;
+    }
+    
+    .chart-container {
+      position: relative;
+      height: 400px;
+      width: 100%;
+    }
+    
+    footer {
+      text-align: center;
+      padding: 1rem;
+      font-size: 0.85rem;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Marathon Pace Planner</h1>
+    <div class="input-container">
+      <label class="label2">Enter your goal time (hh:mm):</label>
+      <input type="text" id="goalTime" placeholder="e.g. 3:00" value="3:00" maxlength="5" />
+    </div>
+    
+    <div class="button-container">
+  <button id="kmBtn">Kilometers</button>
+  <button id="mileBtn">Miles</button>
+</div>
+    
+    <h2>Pace at each stage</h2>
+    <p>This pace strategy for a marathon will help you adjust your speed in each stage to reach your goal time.</p>
+    <div id="paceTable"></div>
+    <h2>Pace over distance</h2>
+    <div class="chart-container">
+      <canvas id="paceChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Chart.js CDN moved to the bottom for proper loading -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    let chart;
+
+    function timeToMinutes(timeStr) {
+      const [h, m] = timeStr.split(":").map(Number);
+      return h * 60 + m;
+    }
+
+    function formatMinutesPerUnit(paceMin) {
+      const min = Math.floor(paceMin);
+      const sec = Math.round((paceMin - min) * 60);
+      return `${min}:${sec.toString().padStart(2, "0")}`;
+    }
+
+    // Define stages with descriptions
+    const stagesMiles = [
+      { stage: 1, adj: 1, description: "60 seconds slower than goal pace" },
+      { stage: 2, adj: 0.5, description: "30 seconds slower than goal pace" },
+      { stage: 3, adj: 0.25, description: "15 seconds slower than goal pace" },
+      { stage: 4, adj: 0, description: "Settle into goal pace" },
+      { stage: 6, adj: -0.08, description: "Gently pick it up to 5–10 seconds faster than goal pace" },
+      { stage: 14, adj: -0.08, description: "5–10 seconds faster than goal pace" },
+      { stage: 21, adj: 0, description: "Try to hold on to goal pace" },
+      { stage: 25, adj: 0, description: "Dig deep and finish strong!" },
+      { stage: 26.2, adj: 0, description: "Finish!" }
+    ];
+
+    // Convert miles to kms properly (1 mile = 1.60934 km)
+const stagesKm = stagesMiles.map(s => ({
+  stage: +(s.stage * 1.60934).toFixed(1),
+  adj: s.adj,
+  description: s.description
+}));
+
+    function updateTable(unit = "km") {
+      const input = document.getElementById("goalTime").value;
+      if (!/^\d{1,2}:\d{2}$/.test(input)) return;
+
+      const totalMinutes = timeToMinutes(input);
+      const pacePerMile = totalMinutes / 26.2;
+      const pacePerKm = totalMinutes / 42.195;
+      const stages = unit === "miles" ? stagesMiles : stagesKm;
+      const pace = unit === "miles" ? pacePerMile : pacePerKm;
+      const maxDistance = unit === "miles" ? 26.2 : 42.195;
+
+      let html = `
+        <table>
+          <thead>
+            <tr><th>Stage (${unit})</th><th>Pace (min/${unit})</th><th class="th2">Description</th></tr>
+          </thead>
+          <tbody>
+      `;
+
+      const labels = [];
+      const data = [];
+      const distances = [];
+
+      for (const s of stages) {
+        let displayPace;
+        if (s.adj === 0) {
+          displayPace = formatMinutesPerUnit(pace + s.adj);
+        } else {
+          displayPace = formatMinutesPerUnit(pace + s.adj);
+        }
+        labels.push(s.stage);
+        distances.push(s.stage);
+        data.push(pace + s.adj);
+        html += `<tr><td>${s.stage}</td><td>${displayPace}</td><td class="td2">${s.description}</td></tr>`;
+      }
+
+      html += `</tbody></table>`;
+      document.getElementById("paceTable").innerHTML = html;
+
+      // Draw chart
+      if (chart) chart.destroy();
+      try {
+        
+      const ctx = document.getElementById('paceChart').getContext('2d');
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: distances,
+          datasets: [{
+            label: `Pace (min/${unit})`,
+            data: data,
+            fill: true,
+            backgroundColor: 'rgba(255, 255, 0, 0.2)',
+            borderColor: 'rgba(255, 255, 0, 1)',
+            tension: 0.3,
+            pointRadius: 5
+          }, 
+          {
+            label: 'Target Pace',
+            data: labels.map(() => pace),
+            fill: false,
+            borderColor: 'red',
+            borderWidth: 2,
+            pointRadius: 0,
+            borderDash: [5, 5]
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          scales: {
+            y: {
+              reverse: true,
+              title: {
+                display: true,
+                text: `Pace (min/${unit})`
+              }
+            },
+            x: {
+              type: 'linear',
+              position: 'bottom',
+              min: 0,
+              max: maxDistance,
+              title: {
+                display: true,
+                text: `Distance (${unit})`
+              },
+              ticks: {
+                callback: function(value) {
+                  // Show all stage labels that match our distances array
+                  return distances.includes(value) ? value : '';
+                }
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top'
+            }
+          }
+        }
+      });
+      
+} catch (e) {
+        console.error("Chart.js failed to load: ", e);
+      }
+      
+    }
+
+    document.getElementById("goalTime").addEventListener("input", function() {
+      const unit = document.getElementById("kmBtn").classList.contains("active") ? "km" : "miles";
+      updateTable(unit);
+    });
+
+    document.getElementById("kmBtn").addEventListener("click", function() {
+      this.classList.add("active");
+      document.getElementById("mileBtn").classList.remove("active");
+      updateTable("km");
+    });
+
+    document.getElementById("mileBtn").addEventListener("click", function() {
+      this.classList.add("active");
+      document.getElementById("kmBtn").classList.remove("active");
+      updateTable("miles");
+    });
+
+    // Set default to kilometers
+    document.getElementById("kmBtn").classList.add("active");
+    updateTable("km");
+  </script>
+</body>
+</html>

@@ -1,11 +1,7 @@
-<!DOCTYPE html>
 <!-- 
-Version: 3.15-mini
-Date: 2025-04-27 20:10 IST
+Version: 3.12-mini
+Date: 2025-04-27 19:00 IST
 Changes:
-- Changed Chart.js reference to local file
-- Fixed km labels display issue
-- Added stage at distance 0 for better chart visualization
 - Fixed Chart.js loading issue
 - Added defer attribute to script tag
 - Added fallback error handling for Chart.js
@@ -22,26 +18,22 @@ Changes:
 - Fixed infinite height growth issue in chart
 - Fixed x-axis scale to be proportional to marathon distance
 - Updates by Claude
-- Simplified x-axis: now shows only the exact stage points (no intermediate ticks)
-- Reduced table row height and vertical spacing
-- Improved mobile view spacing
 -->
 
-
-
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Marathon Pace Planner</title>
-  <!-- Load Chart.js from local file -->
+  <!-- Load Chart.js in the head with defer attribute -->
   <script src="chart.js" defer></script>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
       background: #fff9db;
       margin: 0;
-      padding: 1rem;
+      padding: 1.5rem;
       color: #111827;
       display: flex;
       flex-direction: column;
@@ -52,27 +44,25 @@ Changes:
       max-width: 100%;
       margin: auto;
       background: white;
-      padding: 1rem;
+      padding: 1.5rem;
       border-radius: 1rem;
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
     h1 {
       text-align: center;
-      margin-bottom: 1rem;
-      font-size: 2rem;
+      margin-bottom: 1.5rem;
+      font-size: 2.2rem;
       color: #004ab1;
       text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
       border-bottom: 2px solid #fde68a;
-      padding-bottom: 0.3rem;
-      margin-top: 0.5rem;
+      padding-bottom: 0.5rem;
     }
     h2 {
       text-align: center;
-      font-size: 1.2rem;
+      /*margin-top: 2rem;*/
+      font-size: 1.3rem;
       color: #4b5563;
       text-decoration: underline;
-      margin-top: 1rem;
-      margin-bottom: 0.5rem;
     }
     .label2 {
       font-size: 1.3rem;
@@ -84,13 +74,13 @@ Changes:
 
     label {
       text-align: center;
-      margin-bottom: 0.3rem;
+      margin-bottom: 0.5rem;
       font-size: 1.1rem;
     }
     
     .input-container {
       text-align: center;
-      margin-bottom: 0.5rem;
+      margin-bottom: 1rem;
     }
     
     input {
@@ -104,17 +94,17 @@ Changes:
       vertical-align: middle;
     }
     button {
-      padding: 0.4rem 0.8rem;
-      margin: 0.3rem;
+      padding: 0.5rem 1rem;
+      margin: 0.5rem;
       font-size: 1rem;
-      text-align: center;
+      text-align: center; /* Centra los botones horizontalmente */
       border-radius: 0.5rem;
       border: none;
       background-color: #fde68a;
       color: #92400e;
       cursor: pointer;
       display: inline-block;
-      margin: 8px auto;
+      margin: 10px auto; /* Centra cada botón individualmente */
     }
     button.active {
       background-color: #facc15;
@@ -130,16 +120,16 @@ Changes:
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 0.5rem;
+      margin-top: 1rem;
       font-size: 0.9rem;
     }
     th, td {
-      padding: 0.3rem;
+      padding: 0.5rem;
       text-align: center;
       border-bottom: 1px solid #e5e7eb;
-      line-height: 1.2;
     }
-    .td2 {
+    .td2
+    {
       text-align: left;
       border-bottom: 1px solid #e5e7eb;
     }
@@ -155,33 +145,31 @@ Changes:
       color: #d97706;
     }
     p.description {
-      margin-top: 0.5rem;
-      margin-bottom: 0.5rem;
-      font-size: 0.9rem;
+      margin-top: 1rem;
+      font-size: 1rem;
       text-align: center;
       color: #6b7280;
     }
     
     .chart-container {
       position: relative;
-      height: 350px;
+      height: 400px;
       width: 100%;
-      margin-top: 0.5rem;
     }
     
     footer {
       text-align: center;
-      padding: 0.5rem;
+      padding: 1rem;
       font-size: 0.85rem;
       color: #6b7280;
     }
     
     .chart-error {
-      padding: 0.5rem;
+      padding: 1rem;
       background-color: #fee2e2;
       color: #b91c1c;
       border-radius: 0.5rem;
-      margin: 0.5rem 0;
+      margin: 1rem 0;
       text-align: center;
     }
   </style>
@@ -200,7 +188,7 @@ Changes:
     </div>
     
     <h2>Pace at each stage</h2>
-    <p class="description">This pace strategy for a marathon will help you adjust your speed in each stage to reach your goal time.</p>
+    <p>This pace strategy for a marathon will help you adjust your speed in each stage to reach your goal time.</p>
     <div id="paceTable"></div>
     <h2>Pace over distance</h2>
     <div class="chart-container">
@@ -226,15 +214,8 @@ Changes:
       return `${min}:${sec.toString().padStart(2, "0")}`;
     }
 
-    function formatRaceTime(minutes) {
-      const hours = Math.floor(minutes / 60);
-      const mins = Math.floor(minutes % 60);
-      return `${hours}:${mins.toString().padStart(2, "0")}`;
-    }
-
-    // Define stages with descriptions - add initial stage at distance 0
+    // Define stages with descriptions
     const stagesMiles = [
-      { stage: 0, adj: 1, description: "Start" },
       { stage: 1, adj: 1, description: "60 seconds slower than goal pace" },
       { stage: 2, adj: 0.5, description: "30 seconds slower than goal pace" },
       { stage: 3, adj: 0.25, description: "15 seconds slower than goal pace" },
@@ -271,12 +252,7 @@ Changes:
       let html = `
         <table>
           <thead>
-            <tr>
-              <th>Stage (${unit})</th>
-              <th>Pace (min/${unit})</th>
-              <th class="th2">Description</th>
-              <th>Race Time</th>
-            </tr>
+            <tr><th>Stage (${unit})</th><th>Pace (min/${unit})</th><th class="th2">Description</th></tr>
           </thead>
           <tbody>
       `;
@@ -285,40 +261,17 @@ Changes:
       const data = [];
       const distances = [];
 
-      // Calculate cumulative time for each stage
-      let cumulativeTime = 0;
-      let prevStage = 0;
-
-      // Skip displaying the "Start" (0 distance) in the table but keep it for the chart
-      for (let i = 0; i < stages.length; i++) {
-        const s = stages[i];
-        
-        let displayPace = formatMinutesPerUnit(pace + s.adj);
-        
-        // Calculate race time at this stage
-        const distanceCovered = s.stage - prevStage;
-        const segmentTime = distanceCovered * (pace + s.adj);
-        cumulativeTime += segmentTime;
-        
-        
-        
-        let raceTime = i === 0 ? "0:00" : formatRaceTime(cumulativeTime);
-        
-        html += `<tr>
-                  <td>${s.stage}</td>
-                  <td>${displayPace}</td>
-                  <td class="td2">${s.description}</td>
-                  <td>${raceTime} hrs</td>
-                </tr>`;
-                
-        prevStage = s.stage;
-      }
-      
-      // Prepare chart data (include all stages including start at 0)
       for (const s of stages) {
+        let displayPace;
+        if (s.adj === 0) {
+          displayPace = formatMinutesPerUnit(pace + s.adj);
+        } else {
+          displayPace = formatMinutesPerUnit(pace + s.adj);
+        }
         labels.push(s.stage);
         distances.push(s.stage);
         data.push(pace + s.adj);
+        html += `<tr><td>${s.stage}</td><td>${displayPace}</td><td class="td2">${s.description}</td></tr>`;
       }
 
       html += `</tbody></table>`;
@@ -341,7 +294,6 @@ Changes:
         if (chart) {
           chart.destroy();
         }
-        ;
         
         chart = new Chart(ctx, {
           type: 'line',
@@ -377,59 +329,28 @@ Changes:
                   text: `Pace (min/${unit})`
                 }
               },
-// INICIO DE X
-x: {
-  type: 'linear',
-  position: 'bottom',
-  min: 0,
-  max: maxDistance,
-  title: {
-    display: true,
-    text: `Distance (${unit})`
-  },
-  ticks: {
-    callback: function(value) {
-      /*
-      // Mostrar solo los valores exactos de los stages
-      const stagePoints = stages.map(s => Number(s.stage.toFixed(2)));
-      if (stagePoints.includes(value)) {
-        return value;
-      }
-        */
-      // Asumimos que `stages` tiene los puntos
-      const stage = stages.find(s => Number(s.stage.toFixed(2)) === value);
-      if (stage) {
-        return stage.stage; // Mostrar la descripción del stage
-      }
-      return ''; // No mostrar nada si no es un stage
-    }
-  },
-  // Asegurarse de que el gráfico se redibuje correctamente con todos los puntos de stage
-  afterBuildTicks: function(scale) {
-    // Sacar los puntos exactos de cada stage
-    const stagePoints = stages.map(s => Number(s.stage.toFixed(2)));
-
-    console.log('🔵 stagePoints:', stagePoints);
-
-    // Forzar los ticks a ser solo los valores de stage
-    scale.ticks = stagePoints.map(value => ({
-      value: value,
-      label: value.toFixed(2) // formato de 2 decimales
-    }));
-
-    console.log('🟣 scale.ticks:', scale.ticks);
-
-    return scale;
-  }
-}
-
-
-//FIN DE X
-
-
-
-
-
+              x: {
+                type: 'linear',
+                position: 'bottom',
+                min: 0,
+                max: maxDistance,
+                title: {
+                  display: true,
+                  text: `Distance (${unit})`
+                },
+                ticks: {
+                  stepSize: 1,
+                  callback: function(value) {
+                    // Check if the value is close to any of our stage values
+                    for (let i = 0; i < distances.length; i++) {
+                      if (Math.abs(value - distances[i]) < 0.1) {
+                        return distances[i];
+                      }
+                    }
+                    return '';
+                  }
+                }
+              }
             },
             plugins: {
               legend: {
@@ -451,12 +372,31 @@ x: {
 
     // Wait for Chart.js to load before initializing
     function initializeApp() {
-      // Set focus and select all text on load
-      document.getElementById("goalTime").focus();
-      document.getElementById("goalTime").select();
-
-      // Basic input validation only
-      document.getElementById("goalTime").addEventListener("input", function() {
+      // Handle time input formatting and automatic replacement
+      document.getElementById("goalTime").addEventListener("input", function(e) {
+        let value = e.target.value.replace(/[^0-9:]/g, '');
+        
+        // Handle automatic formatting for easier input
+        if (/^\d{1,2}$/.test(value)) {
+          if (parseInt(value) > 9) {
+            value = value + ":";
+          }
+        } else if (/^\d{1,2}:$/.test(value)) {
+          // Already formatted correctly
+        } else if (/^\d{1,2}:\d{1,2}$/.test(value)) {
+          // Format minutes to always be two digits
+          const [h, m] = value.split(":");
+          if (m.length === 1) {
+            value = h + ":" + m + "0";
+          }
+        }
+        
+        // Update the input if value has been modified
+        if (value !== e.target.value) {
+          e.target.value = value;
+        }
+        
+        // Update the table with current unit
         const unit = document.getElementById("kmBtn").classList.contains("active") ? "km" : "miles";
         updateTable(unit);
       });
@@ -476,6 +416,10 @@ x: {
       // Set default to kilometers
       document.getElementById("kmBtn").classList.add("active");
       updateTable("km");
+      
+      // Focus on input field
+      document.getElementById("goalTime").focus();
+      document.getElementById("goalTime").select();
     }
 
     // Check if Chart.js is loaded or try to load it dynamically if needed
@@ -484,19 +428,21 @@ x: {
       if (checkChartAvailability()) {
         initializeApp();
       } else {
-        // If Chart.js is not available, wait a bit and retry
-        console.log("Chart.js not loaded yet, waiting...");
-        setTimeout(function() {
-          if (checkChartAvailability()) {
-            console.log("Chart.js now available");
-            initializeApp();
-          } else {
-            console.error("Chart.js still not available after waiting");
-            document.getElementById("chartError").style.display = "block";
-            // Still initialize the app without chart functionality
-            initializeApp();
-          }
-        }, 1000);
+        // If Chart.js is not available, try to load it dynamically
+        console.log("Chart.js not loaded, attempting to load it dynamically");
+        const script = document.createElement('script');
+        script.src = "https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js";
+        script.onload = function() {
+          console.log("Chart.js loaded dynamically");
+          initializeApp();
+        };
+        script.onerror = function() {
+          console.error("Failed to load Chart.js dynamically");
+          document.getElementById("chartError").style.display = "block";
+          // Still initialize the app without chart functionality
+          initializeApp();
+        };
+        document.head.appendChild(script);
       }
     };
   </script>
